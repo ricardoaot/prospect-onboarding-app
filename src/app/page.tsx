@@ -1,101 +1,190 @@
-import Image from "next/image";
+"use client"
+import { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { TextField, Button, Stepper, Step, StepLabel } from '@mui/material';
+import { request, gql } from "graphql-request";
 
-export default function Home() {
+const schema = z.object({
+  name: z.string().min(2, 'Name is required'),
+  lastname: z.string().min(2, 'Lastname is required'),
+  birthday: z.string().nonempty('Birthday is required'),
+  email: z.string().email('Invalid email'),
+  phone: z.string().nonempty('Phone number is required'),
+});
+
+const steps = [
+  'Personal Information',
+  'Location Information',
+  'Bank Information',
+  'Other Information'
+];
+
+
+// Tipado de datos
+interface FormData {
+  name: string;
+  lastname: string;
+  birthday: string;
+  email: string;
+  phone: string;
+}
+
+interface OnboardingStepPersonalProps {
+  onNext: () => void;
+}
+
+
+// Define GraphQL mutation
+const GET_PROSPECT = gql`
+  query {
+    getProspect
+  }
+`;
+
+const CREATE_PROSPECT = gql`
+  mutation CreateProspect(
+    $name: String!,
+    $lastname: String!,
+    $birthday: Date!,
+    $email: String!,
+    $phone: String!
+  ) {
+    createProspect(
+      name: $name,
+      lastname: $lastname,
+      birthday: $birthday,
+      email: $email,
+      phone: $phone
+    ) {
+      id
+      name
+      lastname
+      birthday
+      email
+      phone
+    }
+  }
+`;
+
+export default function OnboardingForm() {
+  const [activeStep, setActiveStep] = useState(0);
+  const { control, handleSubmit } = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      name: '',
+      lastname: '',
+      birthday: '',
+      email: '',
+      phone: '',
+    },
+  });
+
+  const savePersonalInfo = async (data: FormData) => {
+    try {
+      console.log('Form Data:', data);
+      const response = await request("http://localhost:3001/graphql", CREATE_PROSPECT, data);
+      console.log("Datos guardados:", response);
+
+
+    } catch (error) {
+      console.error("Error al guardar la información:", error);
+    }
+  };
+
+  const savePersonalInfo2 = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: `
+            query {
+              getProspect
+            }
+          `
+        }),
+      });
+
+      const data = await response.json();
+      console.log("Respuesta GraphQL:", data);
+    } catch (error) {
+      console.error("Error en la petición GraphQL:", error);
+    }
+  };
+
+
+  const onNext = () => {
+    setActiveStep((prevStep) => prevStep + 1);
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div style={{ maxWidth: 600, margin: 'auto' }}>
+      <Stepper activeStep={activeStep} alternativeLabel>
+        {steps.map((label, index) => (
+          <Step key={index}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+      {activeStep < steps.length ? (
+        <form onSubmit={handleSubmit(savePersonalInfo)}>
+          {activeStep === 0 && (
+            <>
+              <Controller
+                name="name"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <TextField {...field} label="Name" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                )}
+              />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+              <Controller
+                name="lastname"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <TextField {...field} label="Apellido" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                )}
+              />
+              <Controller
+                name="birthday"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <TextField {...field} label="Fecha de nacimiento" type="date" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                )}
+              />
+              <Controller
+                name="email"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <TextField {...field} label="Correo electrónico" type="email" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                )}
+              />
+              <Controller
+                name="phone"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <TextField {...field} label="Teléfono" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                )}
+              />
+
+            </>
+          )}
+          {activeStep === 1 && (
+            <>
+              <Button type="submit" variant="contained" color="primary" style={{ marginTop: 20 }}>
+                save
+              </Button>
+            </>
+          )}
+        </form>
+      ) : (
+        <p>All steps completed!</p>
+      )}
+      <Button onClick={() => onNext()} variant="contained" color="primary" style={{ marginTop: 20 }}>
+        Next
+      </Button>
     </div>
   );
 }
