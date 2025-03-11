@@ -1,9 +1,8 @@
-import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Onboarding Platform",
-  description: "Welcome to our Onboarding Platform",
+  title: "Onboarding Platform - List of Prospects",
+  description: "Manage your prospects",
 };
 
 export default function RootLayout({

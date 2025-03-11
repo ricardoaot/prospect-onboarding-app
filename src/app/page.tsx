@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { TextField, Button, Stepper, Step, StepLabel } from '@mui/material';
 import { request, gql } from "graphql-request";
+import {ProspectForm} from '../type/prospect'
 
 const schema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -22,26 +23,7 @@ const steps = [
 ];
 
 
-// Tipado de datos
-interface FormData {
-  name: string;
-  lastname: string;
-  birthday: string;
-  email: string;
-  phone: string;
-}
-
-interface OnboardingStepPersonalProps {
-  onNext: () => void;
-}
-
-
 // Define GraphQL mutation
-const GET_PROSPECT = gql`
-  query {
-    getProspect
-  }
-`;
 
 const CREATE_PROSPECT = gql`
   mutation CreateProspect(
@@ -81,7 +63,7 @@ export default function OnboardingForm() {
     },
   });
 
-  const savePersonalInfo = async (data: FormData) => {
+  const savePersonalInfo = async (data: ProspectForm) => {
     try {
       console.log('Form Data:', data);
       const response = await request("http://localhost:3001/graphql", CREATE_PROSPECT, data);
@@ -92,28 +74,6 @@ export default function OnboardingForm() {
       console.error("Error al guardar la información:", error);
     }
   };
-
-  const savePersonalInfo2 = async () => {
-    try {
-      const response = await fetch("http://localhost:3001/graphql", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: `
-            query {
-              getProspect
-            }
-          `
-        }),
-      });
-
-      const data = await response.json();
-      console.log("Respuesta GraphQL:", data);
-    } catch (error) {
-      console.error("Error en la petición GraphQL:", error);
-    }
-  };
-
 
   const onNext = () => {
     setActiveStep((prevStep) => prevStep + 1);
