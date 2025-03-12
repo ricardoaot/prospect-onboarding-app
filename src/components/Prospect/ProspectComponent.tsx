@@ -8,12 +8,13 @@ import { request, gql } from "graphql-request";
 import { Prospect } from '../../type/prospect'
 import ProspectGrid from "./ProspectGrid";
 import { Tabs, Tab, Box, Paper, Typography } from "@mui/material";
+import { getProspects, QUALIFY_PROSPECT } from "./ProspectListQueries";
 
 type prospectProp = {
     prospectList: Prospect[]
 }
 
-enum QualificationStatus {
+enum ProspectStatus {
     Pending = "pending",
     Approved = "approved",
     Rejected = "rejected",
@@ -21,8 +22,15 @@ enum QualificationStatus {
 }
 
 export default function ProspectComponent({ prospectList }: prospectProp) {
-    const [prospects, setProspects] = useState<Prospect[]>([]);
-    const statuses = ["pending", "approved", "rejected"];
+    const [pendingProspects, setPendingProspects] = useState<Prospect[]>([]);
+    const [approvedProspects, setApprovedProspects] = useState<Prospect[]>([]);
+    const [rejectedProspects, setRejectedProspects] = useState<Prospect[]>([]);
+
+    const statuses = [
+        ProspectStatus.Pending,
+        ProspectStatus.Approved,
+        ProspectStatus.Rejected
+    ];
 
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -31,31 +39,60 @@ export default function ProspectComponent({ prospectList }: prospectProp) {
     const currentStatus = searchParams.get("status") || "pending";
     const [selectedStatus, setSelectedStatus] = useState(currentStatus);
 
-    const handleQualify = (id: string, QualificationStatus: string) => {
-        console.log('id', id)
+    const fetchPendingProspectGrids = async () => {
+        const pendingProspectsData = await getProspects([ProspectStatus.Pending]); setPendingProspects(pendingProspectsData)
     }
+
+    const fetchApprovedProspectGrids = async () => {
+        const approvedProspectsData = await getProspects([ProspectStatus.Approved]);
+        setApprovedProspects(approvedProspectsData)
+    }
+
+    const fetchRejectedProspectGrids = async () => {
+        const rejectedProspectsData = await getProspects(
+            [
+                ProspectStatus.Rejected
+                ,ProspectStatus.Blacklisted
+            ]
+        );
+        setRejectedProspects(rejectedProspectsData)
+    }
+
+    const fetchProspectGrids = async () => {
+        fetchPendingProspectGrids()
+        fetchApprovedProspectGrids()
+        fetchRejectedProspectGrids()
+    }
+
+    const handlerQualifyProspect = async (id: string, qualificationStatus: string) => {
+        try {
+            const data = {
+                id,
+                status: qualificationStatus
+            }
+            const onboardingUrl = process.env.NEXT_PUBLIC_API_URL;
+
+            const response = await request(
+                `${onboardingUrl}/graphql`,
+                QUALIFY_PROSPECT,
+                data
+            );
+            console.log("Qualified Prospect:", response);
+            fetchProspectGrids()
+        } catch (error) {
+            console.error("Error updating prospect:", error);
+        }
+    }
+
+    useEffect(() => {
+        setPendingProspects(prospectList)
+        fetchApprovedProspectGrids()
+        fetchRejectedProspectGrids()
+    }, []);
 
     useEffect(() => {
         setSelectedStatus(currentStatus);
     }, [currentStatus]);
-
-
-    useEffect(() => {
-        setProspects(prospectList);
-        //loadProspects();
-    }, [prospectList]);
-
-    /*
-      const loadProspects = async () => {
-        const data = await getProspects();
-        setProspects(data.users);
-      };
-    
-      const handleQualify = async (id: string) => {
-        await qualifyProspect(id);
-        loadProspects(); // Recargar la lista después de eliminar
-      };
-    */
 
     const handleStatusChange = (_: React.SyntheticEvent, newValue: string) => {
         router.push(`${pathname}?status=${newValue}`, { scroll: false });
@@ -63,7 +100,7 @@ export default function ProspectComponent({ prospectList }: prospectProp) {
 
     return (
         <div className="p-4">
-            <h1 className="text-xl font-bold mb-4">Lista de Prospectos</h1>
+            <h1 className="text-xl font-bold mb-4">Prospect List</h1>
 
             <Box sx={{ width: "100%", p: 3 }}>
                 <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
@@ -81,29 +118,33 @@ export default function ProspectComponent({ prospectList }: prospectProp) {
                 </Paper>
 
                 <Box sx={{ mt: 2 }}>
-                    {selectedStatus === "pending" && <PendingGrid />}
-                    {selectedStatus === "approved" && <ApprovedGrid />}
-                    {selectedStatus === "rejected" && <RejectedGrid />}
+                    {selectedStatus === ProspectStatus.Pending &&
+                        <>
+                            <Paper sx={{ p: 3, textAlign: "left" }}>
+                                <Typography variant="h6">Pending Items</Typography>
+                                <ProspectGrid prospectList={pendingProspects} handlerQualifyProspect={handlerQualifyProspect} />
+                            </Paper>
+
+                        </>
+                    }
+                    {selectedStatus === ProspectStatus.Approved &&
+                        <>
+                            <Paper sx={{ p: 3, textAlign: "left" }}>
+                                <Typography variant="h6">Approved Items</Typography>
+                                <ProspectGrid prospectList={approvedProspects} handlerQualifyProspect={handlerQualifyProspect} />
+                            </Paper>
+                        </>
+                    }
+                    {selectedStatus === ProspectStatus.Rejected &&
+                        <>
+                            <Paper sx={{ p: 3, textAlign: "left" }}>
+                                <Typography variant="h6">Rejected Items</Typography>
+                                <ProspectGrid prospectList={rejectedProspects} handlerQualifyProspect={handlerQualifyProspect} />
+                            </Paper>
+                        </>
+                    }
                 </Box>
             </Box>
-            <ProspectGrid prospectList={prospects} />
-
         </div>
     );
 }
-
-const PendingGrid = () => (
-    <Paper sx={{ p: 3, textAlign: "center" }}>
-        <Typography variant="h6">📌 Pending Items</Typography>
-    </Paper>
-);
-const ApprovedGrid = () => (
-    <Paper sx={{ p: 3, textAlign: "center" }}>
-        <Typography variant="h6">✅ Approved Items</Typography>
-    </Paper>
-);
-const RejectedGrid = () => (
-    <Paper sx={{ p: 3, textAlign: "center" }}>
-        <Typography variant="h6">❌ Rejected Items</Typography>
-    </Paper>
-);
