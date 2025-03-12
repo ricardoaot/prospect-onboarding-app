@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
-import { request, gql } from "graphql-request";
+import { request } from "graphql-request";
 
 import { Prospect } from '../../type/prospect'
 import ProspectGrid from "./ProspectGrid";

@@ -1,5 +1,5 @@
-import ProspectComponent from "@/components/Prospect/ProspectComponent";
-import {getProspects} from "@/components/Prospect/ProspectListQueries";
+import ProspectComponent from "@/components/ProspectList/ProspectComponent";
+import {getProspects} from "@/components/ProspectList/ProspectListQueries";
 
 export default async function OnboardingForm() {
 
