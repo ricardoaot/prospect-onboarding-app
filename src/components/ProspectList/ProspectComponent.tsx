@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
 import { request } from "graphql-request";
@@ -101,55 +101,52 @@ export default function ProspectComponent({ prospectList }: prospectProp) {
     };
 
     return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <div className="p-4">
-                <h1 className="text-xl font-bold mb-4">Prospect List</h1>
+        <div className="p-4">
+            <h1 className="text-xl font-bold mb-4">Prospect List</h1>
 
-                <Box sx={{ width: "100%", p: 3 }}>
-                    <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
-                        <Tabs
-                            value={selectedStatus}
-                            onChange={handleStatusChange}
-                            indicatorColor="primary"
-                            textColor="primary"
-                            variant="fullWidth"
-                        >
-                            {statuses.map((status) => (
-                                <Tab key={status} label={status.toUpperCase()} value={status} />
-                            ))}
-                        </Tabs>
-                    </Paper>
+            <Box sx={{ width: "100%", p: 3 }}>
+                <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
+                    <Tabs
+                        value={selectedStatus}
+                        onChange={handleStatusChange}
+                        indicatorColor="primary"
+                        textColor="primary"
+                        variant="fullWidth"
+                    >
+                        {statuses.map((status) => (
+                            <Tab key={status} label={status.toUpperCase()} value={status} />
+                        ))}
+                    </Tabs>
+                </Paper>
 
-                    <Box sx={{ mt: 2 }}>
-                        {selectedStatus === ProspectStatus.Pending &&
-                            <>
-                                <Paper sx={{ p: 3, textAlign: "left" }}>
-                                    <Typography variant="h6">Pending Items</Typography>
-                                    <ProspectGrid prospectList={pendingProspects} handlerQualifyProspect={handlerQualifyProspect} />
-                                </Paper>
+                <Box sx={{ mt: 2 }}>
+                    {selectedStatus === ProspectStatus.Pending &&
+                        <>
+                            <Paper sx={{ p: 3, textAlign: "left" }}>
+                                <Typography variant="h6">Pending Items</Typography>
+                                <ProspectGrid prospectList={pendingProspects} handlerQualifyProspect={handlerQualifyProspect} />
+                            </Paper>
 
-                            </>
-                        }
-                        {selectedStatus === ProspectStatus.Approved &&
-                            <>
-                                <Paper sx={{ p: 3, textAlign: "left" }}>
-                                    <Typography variant="h6">Approved Items</Typography>
-                                    <ProspectGrid prospectList={approvedProspects} handlerQualifyProspect={handlerQualifyProspect} />
-                                </Paper>
-                            </>
-                        }
-                        {selectedStatus === ProspectStatus.Rejected &&
-                            <>
-                                <Paper sx={{ p: 3, textAlign: "left" }}>
-                                    <Typography variant="h6">Rejected Items</Typography>
-                                    <ProspectGrid prospectList={rejectedProspects} handlerQualifyProspect={handlerQualifyProspect} />
-                                </Paper>
-                            </>
-                        }
-                    </Box>
+                        </>
+                    }
+                    {selectedStatus === ProspectStatus.Approved &&
+                        <>
+                            <Paper sx={{ p: 3, textAlign: "left" }}>
+                                <Typography variant="h6">Approved Items</Typography>
+                                <ProspectGrid prospectList={approvedProspects} handlerQualifyProspect={handlerQualifyProspect} />
+                            </Paper>
+                        </>
+                    }
+                    {selectedStatus === ProspectStatus.Rejected &&
+                        <>
+                            <Paper sx={{ p: 3, textAlign: "left" }}>
+                                <Typography variant="h6">Rejected Items</Typography>
+                                <ProspectGrid prospectList={rejectedProspects} handlerQualifyProspect={handlerQualifyProspect} />
+                            </Paper>
+                        </>
+                    }
                 </Box>
-            </div>
-        </Suspense>
-
+            </Box>
+        </div>
     );
 }
