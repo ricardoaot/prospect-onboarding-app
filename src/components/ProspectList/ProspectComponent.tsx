@@ -52,7 +52,7 @@ export default function ProspectComponent({ prospectList }: prospectProp) {
         const rejectedProspectsData = await getProspects(
             [
                 ProspectStatus.Rejected
-                ,ProspectStatus.Blacklisted
+                , ProspectStatus.Blacklisted
             ]
         );
         setRejectedProspects(rejectedProspectsData)
@@ -85,9 +85,11 @@ export default function ProspectComponent({ prospectList }: prospectProp) {
     }
 
     useEffect(() => {
+        //Only in the first render set Pending prospects from the data fetched in the server with SSR
         setPendingProspects(prospectList)
         fetchApprovedProspectGrids()
         fetchRejectedProspectGrids()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
