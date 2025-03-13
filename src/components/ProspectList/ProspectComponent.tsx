@@ -13,13 +13,7 @@ import { getProspects, QUALIFY_PROSPECT } from "./ProspectListQueries";
 type prospectProp = {
     prospectList: Prospect[]
 }
-
-enum ProspectStatus {
-    Pending = "pending",
-    Approved = "approved",
-    Rejected = "rejected",
-    Blacklisted = "blacklisted",
-}
+import { ProspectStatus } from "../../type/prospect";
 
 export default function ProspectComponent({ prospectList }: prospectProp) {
     const [pendingProspects, setPendingProspects] = useState<Prospect[]>([]);
@@ -124,7 +118,15 @@ export default function ProspectComponent({ prospectList }: prospectProp) {
                         <>
                             <Paper sx={{ p: 3, textAlign: "left" }}>
                                 <Typography variant="h6">Pending Items</Typography>
-                                <ProspectGrid prospectList={pendingProspects} handlerQualifyProspect={handlerQualifyProspect} />
+                                <ProspectGrid
+                                    prospectList={pendingProspects}
+                                    statusActions={[
+                                        ProspectStatus.Approved,
+                                        ProspectStatus.Rejected,
+                                        ProspectStatus.Blacklisted
+                                    ]}
+                                    handlerQualifyProspect={handlerQualifyProspect}
+                                />
                             </Paper>
 
                         </>
@@ -133,7 +135,12 @@ export default function ProspectComponent({ prospectList }: prospectProp) {
                         <>
                             <Paper sx={{ p: 3, textAlign: "left" }}>
                                 <Typography variant="h6">Approved Items</Typography>
-                                <ProspectGrid prospectList={approvedProspects} handlerQualifyProspect={handlerQualifyProspect} />
+                                <ProspectGrid
+                                    prospectList={approvedProspects}
+                                    statusActions={[
+                                        ProspectStatus.Pending
+                                    ]}
+                                    handlerQualifyProspect={handlerQualifyProspect} />
                             </Paper>
                         </>
                     }
@@ -141,7 +148,12 @@ export default function ProspectComponent({ prospectList }: prospectProp) {
                         <>
                             <Paper sx={{ p: 3, textAlign: "left" }}>
                                 <Typography variant="h6">Rejected Items</Typography>
-                                <ProspectGrid prospectList={rejectedProspects} handlerQualifyProspect={handlerQualifyProspect} />
+                                <ProspectGrid
+                                    prospectList={rejectedProspects}
+                                    statusActions={[
+                                        ProspectStatus.Pending
+                                    ]}
+                                    handlerQualifyProspect={handlerQualifyProspect} />
                             </Paper>
                         </>
                     }

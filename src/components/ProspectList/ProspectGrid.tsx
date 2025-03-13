@@ -5,18 +5,22 @@ import { Prospect, ProspectStatus } from '../../type/prospect'
 
 type prospectProp = {
     prospectList: Prospect[],
+    statusActions: string[],
     handlerQualifyProspect: (id: string, qualificationStatus: string) => void
 }
 
 export default function ProspectGrid(
-    { prospectList, handlerQualifyProspect }: prospectProp
+    {
+        prospectList,
+        statusActions,
+        handlerQualifyProspect
+    }: prospectProp
 ) {
     const [prospects, setProspects] = useState<Prospect[]>([]);
 
     useEffect(() => {
         setProspects(prospectList);
     }, [prospectList]);
-
 
     return (
         <div className="p-4">
@@ -38,18 +42,38 @@ export default function ProspectGrid(
                         <div className="text-gray-600">{prospect.phone}</div>
                         <div className="text-gray-600">{prospect.status}</div>
                         <div className="flex justify-center gap-2">
-                            <button
-                                onClick={() => handlerQualifyProspect(prospect.id, ProspectStatus.Approved)}
-                                className="bg-blue-500 text-white px-3 py-1 rounded-md"
-                            >
-                                Approve
-                            </button>
-                            <button
-                                onClick={() => handlerQualifyProspect(prospect.id, ProspectStatus.Rejected)}
-                                className="bg-red-500 text-white px-3 py-1 rounded-md"
-                            >
-                                Reject
-                            </button>
+                            {statusActions.includes(ProspectStatus.Approved) &&
+                                <button
+                                    onClick={() => handlerQualifyProspect(prospect.id, ProspectStatus.Approved)}
+                                    className="bg-green-300 text-gray-700 px-3 py-1 rounded-md"
+                                >
+                                    Approve
+                                </button>
+                            }
+                            {statusActions.includes(ProspectStatus.Rejected) &&
+                                <button
+                                    onClick={() => handlerQualifyProspect(prospect.id, ProspectStatus.Rejected)}
+                                    className="bg-red-400 text-black-700 px-3 py-1 rounded-md"
+                                >
+                                    Reject
+                                </button>
+                            }
+                            {statusActions.includes(ProspectStatus.Blacklisted) &&
+                                <button
+                                    onClick={() => handlerQualifyProspect(prospect.id, ProspectStatus.Blacklisted)}
+                                    className="bg-black text-white px-3 py-1 rounded-md"
+                                >
+                                    Blacklist
+                                </button>
+                            }
+                            {statusActions.includes(ProspectStatus.Pending) &&
+                                <button
+                                    onClick={() => handlerQualifyProspect(prospect.id, ProspectStatus.Pending)}
+                                    className="bg-blue-500 text-white px-3 py-1 rounded-md"
+                                >
+                                    Pending
+                                </button>
+                            }
                         </div>
                     </div>
                 ))}

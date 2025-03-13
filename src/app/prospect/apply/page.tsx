@@ -272,6 +272,12 @@ export default function OnboardingForm() {
           </div>
         </Paper>
       </Box>
+      <a
+        href="/prospect/list"
+        className="px-6 py-3 text-xl font-semibold text-white bg-green-500 rounded-lg shadow-lg hover:bg-green-600 transition"
+      >
+        Qualifying Prospects
+      </a>
     </div>
   );
 }
