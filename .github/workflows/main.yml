@@ -1,0 +1,27 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel (Production for main)
+        if: github.ref == 'refs/heads/main'
+        run: vercel --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel (Preview for dev)
+        if: github.ref == 'refs/heads/dev'
+        run: curl -X POST -d {} ${{ secrets.VERCEL_DEV_HOOK }}
