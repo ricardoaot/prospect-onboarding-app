@@ -15,18 +15,18 @@ const schema = z.object({
   phone: z.string().nonempty('Phone number is required'),
   profilePhoto: z.string().nonempty('Profile photo is required'),
 
-  Country: z.string().nonempty('Country is required'),
+  country: z.string().nonempty('Country is required'),
   city: z.string().nonempty('City is required'),
   fullAddress: z.string().nonempty('Full address is required'),
-  LocationCoordinates: z.string().nonempty('Location coordinates are required'),
+  locationCoordinates: z.string().nonempty('Location coordinates are required'),
 
   bankName: z.string().nonempty('Bank name is required'),
   bankAccountNumber: z.string().nonempty('Bank account number is required'),
   taxID: z.string().nonempty('Tax ID is required'),
   documentOrPassport: z.string().nonempty('Document Or Passport are required'),
 
-  otherRelevantDetails: z.string().nullable(),
-  fileOtherInfo: z.string().nullable()
+  otherRelevantDetails: z.string(),
+  fileOtherInfo: z.string()
 });
 
 const steps = [
@@ -45,14 +45,42 @@ const CREATE_PROSPECT = gql`
     $lastname: String!,
     $birthday: Date!,
     $email: String!,
-    $phone: String!
+    $phone: String!,
+    $profilePhoto: String!,
+
+    $country: String!,
+    $city: String!,
+    $fullAddress: String!,
+    $locationCoordinates: String!,
+
+    $bankName: String!,
+    $bankAccountNumber: String!,
+    $taxID: String!,
+    $documentOrPassport: String!,
+
+    $otherRelevantDetails: String!,
+    $fileOtherInfo: String! 
   ) {
     createProspect(
       name: $name,
       lastname: $lastname,
       birthday: $birthday,
       email: $email,
-      phone: $phone
+      phone: $phone,
+      profilePhoto: $profilePhoto,
+
+      country: $country,
+      city: $city,
+      fullAddress: $fullAddress,
+      locationCoordinates: $locationCoordinates,
+
+      bankName: $bankName,
+      bankAccountNumber: $bankAccountNumber,
+      taxID: $taxID,
+      documentOrPassport: $documentOrPassport,
+
+      otherRelevantDetails: $otherRelevantDetails,
+      fileOtherInfo: $fileOtherInfo
     ) {
       id
       name
@@ -71,12 +99,43 @@ export default function OnboardingForm() {
   const { control, handleSubmit } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
+      name: 'Augusto',
+      lastname: 'Talledo',
+      birthday: '2025-01-12',
+      email: 'no-repeat-this-email-1@example.com',
+      phone: '8987879',
+      profilePhoto: 'fot',
+      country: 'PE',
+      city: 'Lima',
+      fullAddress: 'Addresssss',
+      locationCoordinates: '12.04318,-77.02824',
+      bankName: 'BCP',
+      bankAccountNumber: '5435643656',
+      taxID: '6576756',
+      documentOrPassport: '234324',
+      otherRelevantDetails: 'Other info important',
+      fileOtherInfo: 'This file'
+    }
+    /*
+      defaultValues: {
       name: '',
       lastname: '',
       birthday: '',
       email: '',
       phone: '',
-    },
+      profilePhoto: '',
+      country: '',
+      city: '',
+      fullAddress: '',
+      locationCoordinates: '',
+      bankName: '',
+      bankAccountNumber: '',
+      taxID: '',
+      documentOrPassport: '',
+      otherRelevantDetails: '',
+      fileOtherInfo: ''
+    }
+    */
   });
 
   const saveApplication = async (data: ProspectForm) => {
@@ -173,7 +232,7 @@ export default function OnboardingForm() {
                 {activeStep === 1 && (
                   <>
                     <Controller
-                      name="Country"
+                      name="country"
                       control={control}
                       render={({ field, fieldState }) => (
                         <TextField {...field} label="Country" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
@@ -194,7 +253,7 @@ export default function OnboardingForm() {
                       )}
                     />
                     <Controller
-                      name="LocationCoordinates"
+                      name="locationCoordinates"
                       control={control}
                       render={({ field, fieldState }) => (
                         <TextField {...field} label="Location Coordinates" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
@@ -253,22 +312,34 @@ export default function OnboardingForm() {
                         <TextField {...field} label="File Uploader" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
                       )}
                     />
+                  </>
+                )}
+
+                <div className="flex justify-between items-center w-full">
+                  <div className="flex gap-2">
+                    {activeStep > 0 &&
+                      <Button onClick={() => onBack()} variant="contained" color="primary" style={{ marginTop: 20 }}>
+                        Back
+                      </Button>
+
+                    }
+                    <Button onClick={() => onNext()} variant="contained" color="primary" style={{ marginTop: 20 }}>
+                      Next
+                    </Button>
+                  </div>
+
+                  {activeStep === 3 &&
                     <Button type="submit" variant="contained" color="primary" style={{ marginTop: 20 }}>
                       save
                     </Button>
-                  </>
-                )}
+                  }
+                </div>
               </form>
             )}
             {isApplicationSubmited && (
-              <p>All steps completed!</p>
+              <p>Thanks for your application! We will reach out to you as soon as possible! </p>
             )}
-            <Button onClick={() => onBack()} variant="contained" color="primary" style={{ marginTop: 20 }}>
-              Back
-            </Button>
-            <Button onClick={() => onNext()} variant="contained" color="primary" style={{ marginTop: 20 }}>
-              Next
-            </Button>
+
           </div>
         </Paper>
       </Box>
