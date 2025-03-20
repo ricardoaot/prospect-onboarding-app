@@ -46,17 +46,8 @@ const stepFields: Record<number, Path<FormSchema>[]> = {
   3: ["otherRelevantDetails", "fileOtherInfo"]
 };
 
-const getStepWithError = (errors: FieldErrors<FormSchema>) => {
-  for (const [step, fields] of Object.entries(stepFields)) {
-    if (fields.some((field) => !!errors[field as keyof FormSchema])) {
-      return Number(step);
-    }
-  }
-  return 0;
-};
 
 // Define GraphQL mutation
-
 const CREATE_PROSPECT = gql`
   mutation CreateProspect(
     $name: String!,
@@ -163,9 +154,8 @@ export default function OnboardingForm() {
   });
 
   const saveApplication = async (data: ProspectForm) => {
-    console.log("Holaaaa")
-    try {
 
+    try {
       const onboardingUrl = process.env.NEXT_PUBLIC_API_URL;
 
       await request(`${onboardingUrl}/graphql`, CREATE_PROSPECT, data);
