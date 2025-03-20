@@ -1,6 +1,6 @@
 "use client"
 import { useState } from 'react';
-import { useForm, Controller, FieldErrors, Path } from 'react-hook-form';
+import { useForm, Controller, Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { TextField, Button, Stepper, Step, StepLabel, Box, Paper } from '@mui/material';
@@ -108,7 +108,6 @@ export default function OnboardingForm() {
   const {
     control,
     handleSubmit,
-    formState: { errors },
     trigger
   } = useForm({
     resolver: zodResolver(schema),
@@ -162,18 +161,20 @@ export default function OnboardingForm() {
 
       setIsApplicationSubmited(true)
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       
-      const graphqlError = err.response?.errors?.[0];
+      let errorMessage = "Something went wrong. Please try again later.";
 
-      let errorMessage = ""
-
-      if (graphqlError?.extensions?.code === 'PROSPECT_EMAIL_ALREADY_EXISTS') {
-        errorMessage = "Prospect Email already exists, please try a different email."
-      } else {
-        errorMessage = "Something went wrong. Please try again later."
-        console.error("Something went wrong. Error:", err);
+      if (typeof err === "object" && err !== null && "response" in err) {
+        const responseError = err as { response?: { errors?: { extensions?: { code: string }; message: string }[] } };
+        const graphqlError = responseError.response?.errors?.[0];
+  
+        if (graphqlError?.extensions?.code === "PROSPECT_EMAIL_ALREADY_EXISTS") {
+          errorMessage = "Prospect Email already exists, please try a different email.";
+        }
       }
+  
+      console.error("Error:", err);
 
       Swal.fire({
         title: "Error",
