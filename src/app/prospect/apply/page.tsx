@@ -1,11 +1,12 @@
 "use client"
 import { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, FieldErrors, Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { TextField, Button, Stepper, Step, StepLabel, Box, Paper } from '@mui/material';
 import { request, gql } from "graphql-request";
 import { ProspectForm } from '../../../type/prospect'
+import Swal from "sweetalert2"
 
 const schema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -29,6 +30,8 @@ const schema = z.object({
   fileOtherInfo: z.string()
 });
 
+type FormSchema = z.infer<typeof schema>;
+
 const steps = [
   'Personal Information',
   'Location Information',
@@ -36,6 +39,21 @@ const steps = [
   'Other Information'
 ];
 
+const stepFields: Record<number, Path<FormSchema>[]> = {
+  0: ["name", "lastname", "birthday", "email", "phone", "profilePhoto"],
+  1: ["country", "city", "fullAddress", "locationCoordinates"],
+  2: ["bankName", "bankAccountNumber", "taxID", "documentOrPassport"],
+  3: ["otherRelevantDetails", "fileOtherInfo"]
+};
+
+const getStepWithError = (errors: FieldErrors<FormSchema>) => {
+  for (const [step, fields] of Object.entries(stepFields)) {
+    if (fields.some((field) => !!errors[field as keyof FormSchema])) {
+      return Number(step);
+    }
+  }
+  return 0;
+};
 
 // Define GraphQL mutation
 
@@ -96,8 +114,14 @@ export default function OnboardingForm() {
   const [activeStep, setActiveStep] = useState(0);
   const [isApplicationSubmited, setIsApplicationSubmited] = useState(false);
 
-  const { control, handleSubmit } = useForm({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    trigger
+  } = useForm({
     resolver: zodResolver(schema),
+    //Default values set for an easy test
     defaultValues: {
       name: 'Augusto',
       lastname: 'Talledo',
@@ -139,22 +163,63 @@ export default function OnboardingForm() {
   });
 
   const saveApplication = async (data: ProspectForm) => {
+    console.log("Holaaaa")
     try {
-      console.log('Form Data:', data);
+
       const onboardingUrl = process.env.NEXT_PUBLIC_API_URL;
 
-      const response = await request(`${onboardingUrl}/graphql`, CREATE_PROSPECT, data);
-      console.log("Datos guardados:", response);
+      await request(`${onboardingUrl}/graphql`, CREATE_PROSPECT, data);
+
       setIsApplicationSubmited(true)
 
-    } catch (error) {
-      console.error("Error al guardar la información:", error);
+    } catch (err: any) {
+      
+      const graphqlError = err.response?.errors?.[0];
+
+      let errorMessage = ""
+
+      if (graphqlError?.extensions?.code === 'PROSPECT_EMAIL_ALREADY_EXISTS') {
+        errorMessage = "Prospect Email already exists, please try a different email."
+      } else {
+        errorMessage = "Something went wrong. Please try again later."
+        console.error("Something went wrong. Error:", err);
+      }
+
+      Swal.fire({
+        title: "Error",
+        text: errorMessage,
+        icon: "error",
+        timer: 3500,
+        showConfirmButton: false,
+        position: 'top',
+        toast: true
+      });
     }
   };
 
-  const onNext = () => {
+  const areValidStepFields = async (activeStep: number): Promise<boolean> => {
+    return trigger(stepFields[activeStep])
+  }
+
+  const onNext = async () => {
+    const areValidStepFieldsResult = await areValidStepFields(activeStep)
+
+    if (!areValidStepFieldsResult) {
+      Swal.fire({
+        title: "Required Fields",
+        text: "Please fill the required fields",
+        icon: "error",
+        timer: 1500,
+        showConfirmButton: false,
+        position: 'top',
+        toast: true
+      });
+
+      return false
+    }
     setActiveStep((prevStep) => (prevStep < steps.length - 1 ? (prevStep + 1) : prevStep));
   };
+
   const onBack = () => {
     setActiveStep((prevStep) => (prevStep >= 1 ? (prevStep - 1) : prevStep));
   };
@@ -177,167 +242,177 @@ export default function OnboardingForm() {
             {activeStep < steps.length && (
               <form onSubmit={handleSubmit(saveApplication)}>
 
-                {/*Personal Information*/}
-                {activeStep === 0 && (
+                {isApplicationSubmited ? (
                   <>
-                    <Controller
-                      name="name"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Name" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
+                    <div className="min-h-[400px] bg-gray-100 flex items-center justify-center">
+                      <p>Thanks for your application! We will reach out to you as soon as possible! </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
 
-                    <Controller
-                      name="lastname"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Last Name" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
-                    <Controller
-                      name="birthday"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Birthdate" type="date" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
-                    <Controller
-                      name="email"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Email" type="email" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
-                    <Controller
-                      name="phone"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Phone" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
+                    {/*Personal Information*/}
+                    {activeStep === 0 && (
+                      <div className="flex flex-col space-y-4">
+                        <Controller
+                          name="name"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Name" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
 
-                    <Controller
-                      name="profilePhoto"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Profile Photo" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
+                        <Controller
+                          name="lastname"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Last Name" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+                        <Controller
+                          name="birthday"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Birthdate" type="date" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+                        <Controller
+                          name="email"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Email" type="email" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+                        <Controller
+                          name="phone"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Phone" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
 
+                        <Controller
+                          name="profilePhoto"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Profile Photo" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+
+                      </div>
+                    )}
+
+                    {/*Location Information*/}
+                    {activeStep === 1 && (
+                      <>
+                        <Controller
+                          name="country"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Country" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+                        <Controller
+                          name="city"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="city" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+                        <Controller
+                          name="fullAddress"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Full Address" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+                        <Controller
+                          name="locationCoordinates"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Location Coordinates" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+                      </>
+                    )}
+                    {/*Bank Information*/}
+                    {activeStep === 2 && (
+                      <>
+                        <Controller
+                          name="bankName"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Bank name" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+                        <Controller
+                          name="bankAccountNumber"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Bank account number" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+                        <Controller
+                          name="taxID"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Tax ID" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+                        <Controller
+                          name="documentOrPassport"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Document or passport" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+                      </>
+                    )}
+
+                    {/*Other inbformation*/}
+                    {activeStep === 3 && (
+                      <>
+                        <Controller
+                          name="otherRelevantDetails"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="Other Relevant Details" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+                        <Controller
+                          name="fileOtherInfo"
+                          control={control}
+                          render={({ field, fieldState }) => (
+                            <TextField {...field} label="File Uploader" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          )}
+                        />
+                      </>
+                    )}
+                    {/*Buttons*/}
+                    <div className="flex justify-between items-center w-full">
+                      <div className="flex gap-2">
+                        {activeStep > 0 &&
+                          <Button onClick={() => onBack()} variant="contained" color="primary" style={{ marginTop: 20 }}>
+                            Back
+                          </Button>
+
+                        }
+                        {activeStep < 3 &&
+                          <Button onClick={() => onNext()} variant="contained" color="primary" style={{ marginTop: 20 }}>
+                            Next
+                          </Button>
+                        }
+                      </div>
+
+                      {activeStep === 3 &&
+                        <Button type="submit" variant="contained" color="primary" style={{ marginTop: 20 }}>
+                          save
+                        </Button>
+                      }
+                    </div>
                   </>
                 )}
-
-                {/*Location Information*/}
-                {activeStep === 1 && (
-                  <>
-                    <Controller
-                      name="country"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Country" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
-                    <Controller
-                      name="city"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="city" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
-                    <Controller
-                      name="fullAddress"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Full Address" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
-                    <Controller
-                      name="locationCoordinates"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Location Coordinates" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
-                  </>
-                )}
-                {/*Bank Information*/}
-                {activeStep === 2 && (
-                  <>
-                    <Controller
-                      name="bankName"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Bank name" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
-                    <Controller
-                      name="bankAccountNumber"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Bank account number" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
-                    <Controller
-                      name="taxID"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Tax ID" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
-                    <Controller
-                      name="documentOrPassport"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Document or passport" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
-                  </>
-                )}
-
-                {/*Other inbformation*/}
-                {activeStep === 3 && (
-                  <>
-                    <Controller
-                      name="otherRelevantDetails"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="Other Relevant Details" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
-                    <Controller
-                      name="fileOtherInfo"
-                      control={control}
-                      render={({ field, fieldState }) => (
-                        <TextField {...field} label="File Uploader" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
-                      )}
-                    />
-                  </>
-                )}
-
-                <div className="flex justify-between items-center w-full">
-                  <div className="flex gap-2">
-                    {activeStep > 0 &&
-                      <Button onClick={() => onBack()} variant="contained" color="primary" style={{ marginTop: 20 }}>
-                        Back
-                      </Button>
-
-                    }
-                    <Button onClick={() => onNext()} variant="contained" color="primary" style={{ marginTop: 20 }}>
-                      Next
-                    </Button>
-                  </div>
-
-                  {activeStep === 3 &&
-                    <Button type="submit" variant="contained" color="primary" style={{ marginTop: 20 }}>
-                      save
-                    </Button>
-                  }
-                </div>
               </form>
-            )}
-            {isApplicationSubmited && (
-              <p>Thanks for your application! We will reach out to you as soon as possible! </p>
             )}
 
           </div>
