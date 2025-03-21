@@ -47,7 +47,7 @@ export const getProspects = async (statuses: string[]): Promise<Prospect[]> => {
     return response.getProspects
 
   } catch (error) {
-    console.error("Error saving information:", error);
+    console.error("Error:", error);
     return []
   }
 };

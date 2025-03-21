@@ -1,12 +1,13 @@
 "use client"
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, Controller, Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { TextField, Button, Stepper, Step, StepLabel, Box, Paper } from '@mui/material';
+import { TextField, Button, Stepper, Step, StepLabel, Box, Paper, MenuItem, Select, FormHelperText, SelectChangeEvent } from '@mui/material';
 import { request, gql } from "graphql-request";
-import { ProspectForm } from '../../../type/prospect'
+import { ProspectForm, Country } from '../../../type'
 import Swal from "sweetalert2"
+import { getCountries } from '@/components/ProspectApplication/CountryListQueries';
 
 const schema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -46,7 +47,7 @@ const stepFields: Record<number, Path<FormSchema>[]> = {
   3: ["otherRelevantDetails", "fileOtherInfo"]
 };
 
-
+//TODO: move create query to another file
 // Define GraphQL mutation
 const CREATE_PROSPECT = gql`
   mutation CreateProspect(
@@ -101,9 +102,46 @@ const CREATE_PROSPECT = gql`
   }
 `;
 
+
 export default function OnboardingForm() {
   const [activeStep, setActiveStep] = useState(0);
   const [isApplicationSubmited, setIsApplicationSubmited] = useState(false);
+  const [countries, setCountries] = useState<Country[]>([])
+  const [isAllowedCountry, setIsAllowedCountry] = useState<boolean>(false)
+
+  //TODO: deocuople this page in components
+  //TODO: apply SSR to load the countries in the server
+
+  const getAndSetCountries = async () => {
+    const countriesData = await getCountries()
+    console.log('countriesData', countriesData)
+    setCountries(countriesData)
+  }
+
+  //TODO: implement i18 to manage strings values separately and categorize by language
+
+  const showInvalidCountryMessage = ()=>{
+    Swal.fire({
+      title: "Country no allowed",
+      text: "Thanks for your interest in apply but currently we only accept countries where USD is one of their officials currencies",
+      icon: "error",
+      showConfirmButton: false,
+    });
+  }
+
+  const handleSelectCountry = (event: SelectChangeEvent<string>) => {
+    const selectedCountry = event.target.value
+    const allowedCountry = countries.find((country)=> country.id === selectedCountry)?.hasUSD || false
+
+    setIsAllowedCountry(allowedCountry)
+
+    if(!allowedCountry)
+      showInvalidCountryMessage()
+  };
+
+  useEffect(() => {
+    getAndSetCountries()
+  }, [])
 
   const {
     control,
@@ -119,7 +157,7 @@ export default function OnboardingForm() {
       email: 'no-repeat-this-email-1@example.com',
       phone: '8987879',
       profilePhoto: 'fot',
-      country: 'PE',
+      country: 'PER',
       city: 'Lima',
       fullAddress: 'Addresssss',
       locationCoordinates: '12.04318,-77.02824',
@@ -155,6 +193,10 @@ export default function OnboardingForm() {
   const saveApplication = async (data: ProspectForm) => {
 
     try {
+      if(!isAllowedCountry){
+        showInvalidCountryMessage()
+        return false
+      } 
       const onboardingUrl = process.env.NEXT_PUBLIC_API_URL;
 
       await request(`${onboardingUrl}/graphql`, CREATE_PROSPECT, data);
@@ -162,18 +204,18 @@ export default function OnboardingForm() {
       setIsApplicationSubmited(true)
 
     } catch (err: unknown) {
-      
+
       let errorMessage = "Something went wrong. Please try again later.";
 
       if (typeof err === "object" && err !== null && "response" in err) {
         const responseError = err as { response?: { errors?: { extensions?: { code: string }; message: string }[] } };
         const graphqlError = responseError.response?.errors?.[0];
-  
+
         if (graphqlError?.extensions?.code === "PROSPECT_EMAIL_ALREADY_EXISTS") {
           errorMessage = "Prospect Email already exists, please try a different email.";
         }
       }
-  
+
       console.error("Error:", err);
 
       Swal.fire({
@@ -299,10 +341,31 @@ export default function OnboardingForm() {
                         <Controller
                           name="country"
                           control={control}
+                          defaultValue=""
                           render={({ field, fieldState }) => (
-                            <TextField {...field} label="Country" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                            <>
+                              <Select
+                                {...field}
+                                labelId="country-label"
+                                label="Country"
+                                fullWidth
+                                error={!!fieldState.error}
+                                onChange={(event) => {
+                                  field.onChange(event.target.value);
+                                  handleSelectCountry(event); 
+                                }}
+                              >
+                                {countries.map((country) => (
+                                  <MenuItem key={country.id} value={country.id}>
+                                    {country.name}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                              {fieldState.error && <FormHelperText>{fieldState.error.message}</FormHelperText>}
+                            </>
                           )}
                         />
+
                         <Controller
                           name="city"
                           control={control}
