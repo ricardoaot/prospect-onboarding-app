@@ -14,7 +14,7 @@ export type Prospect = {
     birthday: string;
     email: string;
     phone: string;
-    profilePhoto: string;
+    profilePhoto: File; 
 
     country: string;
     city: string;

@@ -1,12 +1,12 @@
-import { request, gql } from "graphql-request";
+import { gql } from "@apollo/client";
+import { client } from "../../lib/apolloClient";
 import { Country } from "@/type";
 
-
 const GET_COUNTRIES = gql`
-  query {
+  query GetCountries {
     getCountries {
-      id, 
-      name, 
+      id
+      name
       hasUSD
     }
   }
@@ -14,21 +14,14 @@ const GET_COUNTRIES = gql`
 
 export const getCountries = async (): Promise<Country[]> => {
   try {
-    const onboardingUrl = process.env.NEXT_PUBLIC_API_URL;
+    const { data } = await client.query<{ getCountries: Country[] }>({
+      query: GET_COUNTRIES,
+      fetchPolicy: "no-cache", // Asegura que no use caché
+    });
 
-    const response = await request<{ getCountries: Country[] }>(
-      `${onboardingUrl}/graphql`,
-      GET_COUNTRIES
-    );
-
-    if (!response?.getCountries) {
-      throw new Error("Unexpected response structure");
-    }
-    
-    return response.getCountries
-
+    return data.getCountries || [];
   } catch (error) {
-    console.error("Error:", error);
-    return []
+    console.error("Error fetching countries:", error);
+    return [];
   }
 };

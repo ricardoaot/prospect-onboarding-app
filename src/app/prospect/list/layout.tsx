@@ -5,16 +5,8 @@ export const metadata: Metadata = {
   description: "Manage your prospects",
 };
 
-export default function RootLayout({
+export default function ApplyLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en">
-      <body>
-        {children}
-      </body>
-    </html>
-  );
+}: Readonly<{ children: React.ReactNode }>) {
+  return <>{children}</>;
 }

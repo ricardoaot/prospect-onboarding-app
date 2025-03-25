@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import ApolloWrapper from "@/lib/ApolloWrapper";
 
 export const metadata: Metadata = {
   title: "Onboarding Platform",
@@ -8,13 +9,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body>
-        {children}
+        <ApolloWrapper>{children}</ApolloWrapper>
       </body>
     </html>
   );

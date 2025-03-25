@@ -3,11 +3,25 @@ import { useEffect, useState } from 'react';
 import { useForm, Controller, Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { TextField, Button, Stepper, Step, StepLabel, Box, Paper, MenuItem, Select, FormHelperText, SelectChangeEvent } from '@mui/material';
-import { request, gql } from "graphql-request";
+import {
+  TextField,
+  Button,
+  Stepper,
+  Step,
+  StepLabel,
+  Box,
+  Paper,
+  MenuItem,
+  Select,
+  FormHelperText,
+  SelectChangeEvent,
+  Typography
+} from '@mui/material';
 import { ProspectForm, Country } from '../../../type'
 import Swal from "sweetalert2"
 import { getCountries } from '@/components/ProspectApplication/CountryListQueries';
+import { ApolloError, useMutation } from '@apollo/client';
+import { CREATE_PROSPECT } from '@/graphql/mutations';
 
 const schema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -15,7 +29,10 @@ const schema = z.object({
   birthday: z.string().nonempty('Birthday is required'),
   email: z.string().email('Invalid email'),
   phone: z.string().nonempty('Phone number is required'),
-  profilePhoto: z.string().nonempty('Profile photo is required'),
+
+  profilePhoto: z
+    .instanceof(File, { message: 'Profile photo is required' })
+    .refine((file) => file.size > 0, 'Profile photo is required'),
 
   country: z.string().nonempty('Country is required'),
   city: z.string().nonempty('City is required'),
@@ -49,58 +66,6 @@ const stepFields: Record<number, Path<FormSchema>[]> = {
 
 //TODO: move create query to another file
 // Define GraphQL mutation
-const CREATE_PROSPECT = gql`
-  mutation CreateProspect(
-    $name: String!,
-    $lastname: String!,
-    $birthday: Date!,
-    $email: String!,
-    $phone: String!,
-    $profilePhoto: String!,
-
-    $country: String!,
-    $city: String!,
-    $fullAddress: String!,
-    $locationCoordinates: String!,
-
-    $bankName: String!,
-    $bankAccountNumber: String!,
-    $taxID: String!,
-    $documentOrPassport: String!,
-
-    $otherRelevantDetails: String!,
-    $fileOtherInfo: String! 
-  ) {
-    createProspect(
-      name: $name,
-      lastname: $lastname,
-      birthday: $birthday,
-      email: $email,
-      phone: $phone,
-      profilePhoto: $profilePhoto,
-
-      country: $country,
-      city: $city,
-      fullAddress: $fullAddress,
-      locationCoordinates: $locationCoordinates,
-
-      bankName: $bankName,
-      bankAccountNumber: $bankAccountNumber,
-      taxID: $taxID,
-      documentOrPassport: $documentOrPassport,
-
-      otherRelevantDetails: $otherRelevantDetails,
-      fileOtherInfo: $fileOtherInfo
-    ) {
-      id
-      name
-      lastname
-      birthday
-      email
-      phone
-    }
-  }
-`;
 
 
 export default function OnboardingForm() {
@@ -108,6 +73,7 @@ export default function OnboardingForm() {
   const [isApplicationSubmited, setIsApplicationSubmited] = useState(false);
   const [countries, setCountries] = useState<Country[]>([])
   const [isAllowedCountry, setIsAllowedCountry] = useState<boolean>(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   //TODO: deocuople this page in components
   //TODO: apply SSR to load the countries in the server
@@ -118,9 +84,22 @@ export default function OnboardingForm() {
     setCountries(countriesData)
   }
 
+  const handleImageChange = (file: File | null) => {
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setImagePreview(null);
+    }
+  };
+
+
   //TODO: implement i18 to manage strings values separately and categorize by language
 
-  const showInvalidCountryMessage = ()=>{
+  const showInvalidCountryMessage = () => {
     Swal.fire({
       title: "Country no allowed",
       text: "Thanks for your interest in apply but currently we only accept countries where USD is one of their officials currencies",
@@ -131,11 +110,11 @@ export default function OnboardingForm() {
 
   const handleSelectCountry = (event: SelectChangeEvent<string>) => {
     const selectedCountry = event.target.value
-    const allowedCountry = countries.find((country)=> country.id === selectedCountry)?.hasUSD || false
+    const allowedCountry = countries.find((country) => country.id === selectedCountry)?.hasUSD || false
 
     setIsAllowedCountry(allowedCountry)
 
-    if(!allowedCountry)
+    if (!allowedCountry)
       showInvalidCountryMessage()
   };
 
@@ -156,14 +135,13 @@ export default function OnboardingForm() {
       birthday: '2025-01-12',
       email: 'no-repeat-this-email-1@example.com',
       phone: '8987879',
-      profilePhoto: 'fot',
       country: 'PER',
       city: 'Lima',
-      fullAddress: 'Addresssss',
+      fullAddress: 'Address (Test)',
       locationCoordinates: '12.04318,-77.02824',
       bankName: 'BCP',
       bankAccountNumber: '5435643656',
-      taxID: '6576756',
+      taxID: '10767566546',
       documentOrPassport: '234324',
       otherRelevantDetails: 'Other info important',
       fileOtherInfo: 'This file'
@@ -190,42 +168,47 @@ export default function OnboardingForm() {
     */
   });
 
-  const saveApplication = async (data: ProspectForm) => {
+  const [createProspect] = useMutation(CREATE_PROSPECT);
+
+  const saveApplication = async (
+    data: ProspectForm
+  ) => {
 
     try {
-      if(!isAllowedCountry){
-        showInvalidCountryMessage()
-        return false
-      } 
-      const onboardingUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!isAllowedCountry) {
+        showInvalidCountryMessage();
+        return false;
+      }
 
-      await request(`${onboardingUrl}/graphql`, CREATE_PROSPECT, data);
+      await createProspect({
+        variables: {
+          ...data,
+          profilePhoto: data.profilePhoto,
+        },
+      });
 
-      setIsApplicationSubmited(true)
+      setIsApplicationSubmited(true);
+    } catch (err) {
+      let errorMessage = 'Something went wrong. Please try again later.';
 
-    } catch (err: unknown) {
+      if (err instanceof ApolloError) {
+        const graphqlError = err.graphQLErrors?.[0];
 
-      let errorMessage = "Something went wrong. Please try again later.";
-
-      if (typeof err === "object" && err !== null && "response" in err) {
-        const responseError = err as { response?: { errors?: { extensions?: { code: string }; message: string }[] } };
-        const graphqlError = responseError.response?.errors?.[0];
-
-        if (graphqlError?.extensions?.code === "PROSPECT_EMAIL_ALREADY_EXISTS") {
-          errorMessage = "Prospect Email already exists, please try a different email.";
+        if (graphqlError?.extensions?.code === 'PROSPECT_EMAIL_ALREADY_EXISTS') {
+          errorMessage = 'Prospect Email already exists, please try a different email.';
         }
       }
 
-      console.error("Error:", err);
+      console.error('Error:', err);
 
       Swal.fire({
-        title: "Error",
+        title: 'Error',
         text: errorMessage,
-        icon: "error",
+        icon: 'error',
         timer: 3500,
         showConfirmButton: false,
         position: 'top',
-        toast: true
+        toast: true,
       });
     }
   };
@@ -327,11 +310,35 @@ export default function OnboardingForm() {
                         <Controller
                           name="profilePhoto"
                           control={control}
-                          render={({ field, fieldState }) => (
-                            <TextField {...field} label="Profile Photo" error={!!fieldState.error} helperText={fieldState.error?.message} fullWidth />
+                          defaultValue={undefined}
+                          render={({ field: { onChange, ref } }) => (
+                            <input
+                              type="file"
+                              ref={ref}
+                              accept="image/*"
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                const file = e.target.files?.[0] || null;
+                                onChange(file);
+                                handleImageChange(file);
+                              }}
+                              style={{ display: 'block', margin: '16px 0' }}
+                            />
                           )}
                         />
 
+                        {imagePreview && (
+                          <Box mt={2}>
+                            <Typography variant="body2" color="text.secondary">
+                              Preview:
+                            </Typography>
+                            <Box
+                              component="img"
+                              src={imagePreview}
+                              alt="Preview"
+                              sx={{ mt: 1, width: '200px', borderRadius: 2, boxShadow: 1 }}
+                            />
+                          </Box>
+                        )}
                       </div>
                     )}
 
@@ -352,7 +359,7 @@ export default function OnboardingForm() {
                                 error={!!fieldState.error}
                                 onChange={(event) => {
                                   field.onChange(event.target.value);
-                                  handleSelectCountry(event); 
+                                  handleSelectCountry(event);
                                 }}
                               >
                                 {countries.map((country) => (

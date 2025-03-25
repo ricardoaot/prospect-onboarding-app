@@ -1,53 +1,38 @@
-import { request, gql } from "graphql-request";
+import { gql } from "@apollo/client";
+import { client } from "../../lib/apolloClient";
 import { Prospect } from '@/type/prospect';
 
-export const QUALIFY_PROSPECT = gql`
-mutation QualifyProspect (
-  $id: String!,
-  $status: String!,
-) {
-  qualifyProspect(
-      id: $id, 
-      status: $status
-  )
-}
-`;
-
-const GET_PROSPECTS = gql`
-  query GetProspects(
-    $statuses: [String!]
-  ){
-    getProspects(
-      statuses:$statuses
-    ) {
-      id,
-      name,
-      lastname,
-      email, 
-      phone,
-      status,
+// Query to get prospects
+export const GET_PROSPECTS = gql`
+  query GetProspects($statuses: [String!]) {
+    getProspects(statuses: $statuses) {
+      id
+      name
+      lastname
+      email
+      phone
+      status
+      profilePhoto
     }
   }
 `;
 
+// Function to get prospects
 export const getProspects = async (statuses: string[]): Promise<Prospect[]> => {
   try {
-    const onboardingUrl = process.env.NEXT_PUBLIC_API_URL;
+    const { data } = await client.query<{ getProspects: Prospect[] }>({
+      query: GET_PROSPECTS,
+      variables: { statuses },
+      fetchPolicy: 'no-cache',
+    });
 
-    const response = await request<{ getProspects: Prospect[] }>(
-      `${onboardingUrl}/graphql`,
-      GET_PROSPECTS,
-      { statuses }
-    );
-
-    if (!response?.getProspects) {
+    if (!data?.getProspects) {
       throw new Error("Unexpected response structure");
     }
 
-    return response.getProspects
-
+    return data.getProspects;
   } catch (error) {
-    console.error("Error:", error);
-    return []
+    console.error("Error getting prospects:", error);
+    return [];
   }
 };
