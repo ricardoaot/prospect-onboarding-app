@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Prospect, ProspectStatus } from '../../type/prospect'
+import Image from "next/image";
 
 type prospectProp = {
     prospectList: Prospect[],
@@ -25,7 +26,8 @@ export default function ProspectGrid(
     return (
         <div className="p-4">
             {/* Headers */}
-            <div className="grid grid-cols-5 bg-gray-700 text-white p-2 rounded-md">
+            <div className="grid grid-cols-6 bg-gray-700 text-white p-2 rounded-md">
+                <div className="font-semibold">Photo</div>
                 <div className="font-semibold">Name</div>
                 <div className="font-semibold">Email</div>
                 <div className="font-semibold">Phone</div>
@@ -36,7 +38,17 @@ export default function ProspectGrid(
             {/* Prospect List */}
             <div className="divide-y divide-gray-200">
                 {prospects.map((prospect) => (
-                    <div key={prospect.id} className="grid grid-cols-5 p-2 items-center">
+                    <div key={prospect.id} className="grid grid-cols-6 p-2 items-center">
+                        <div className="text-gray-900 font-medium">
+                            <Image
+                                className="rounded-full"
+                                src={`${prospect.profilePhoto}`}
+                                alt="Profile Picture"
+                                width={48}
+                                height={48}
+                            />
+
+                        </div>
                         <div className="text-gray-900 font-medium">{`${prospect.name} ${prospect.lastname}`}</div>
                         <div className="text-gray-600">{prospect.email}</div>
                         <div className="text-gray-600">{prospect.phone}</div>

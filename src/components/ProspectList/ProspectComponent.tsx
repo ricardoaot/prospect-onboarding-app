@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-
-import { request } from "graphql-request";
-
 import { Prospect } from '../../type/prospect'
 import ProspectGrid from "./ProspectGrid";
 import { Tabs, Tab, Box, Paper, Typography } from "@mui/material";
-import { getProspects, QUALIFY_PROSPECT } from "./ProspectListQueries";
+//import { getProspects, QUALIFY_PROSPECT } from "./ProspectListQueries";
+import { useMutation } from '@apollo/client';
+import { QUALIFY_PROSPECT } from '@/graphql/mutations';
+import { getProspects } from "./ProspectListQueries";
 
 type prospectProp = {
     prospectList: Prospect[]
@@ -19,6 +19,8 @@ export default function ProspectComponent({ prospectList }: prospectProp) {
     const [pendingProspects, setPendingProspects] = useState<Prospect[]>([]);
     const [approvedProspects, setApprovedProspects] = useState<Prospect[]>([]);
     const [rejectedProspects, setRejectedProspects] = useState<Prospect[]>([]);
+
+    const [QualifyProspect] = useMutation(QUALIFY_PROSPECT)
 
     const statuses = [
         ProspectStatus.Pending,
@@ -34,7 +36,8 @@ export default function ProspectComponent({ prospectList }: prospectProp) {
     const [selectedStatus, setSelectedStatus] = useState(currentStatus);
 
     const fetchPendingProspectGrids = async () => {
-        const pendingProspectsData = await getProspects([ProspectStatus.Pending]); setPendingProspects(pendingProspectsData)
+        const pendingProspectsData = await getProspects([ProspectStatus.Pending]);
+        setPendingProspects(pendingProspectsData)
     }
 
     const fetchApprovedProspectGrids = async () => {
@@ -64,14 +67,15 @@ export default function ProspectComponent({ prospectList }: prospectProp) {
                 id,
                 status: qualificationStatus
             }
-            const onboardingUrl = process.env.NEXT_PUBLIC_API_URL;
 
-            const response = await request(
-                `${onboardingUrl}/graphql`,
-                QUALIFY_PROSPECT,
-                data
-            );
+            const response = await QualifyProspect({
+                variables: {
+                    ...data,
+                },
+            });
+
             console.log("Qualified Prospect:", response);
+            
             fetchProspectGrids()
         } catch (error) {
             console.error("Error updating prospect:", error);

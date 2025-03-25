@@ -6,16 +6,8 @@ export const metadata: Metadata = {
   description: "Welcome to our Onboarding Platform",
 };
 
-export default function RootLayout({
+export default function ApplyLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en">
-      <body>
-        {children}
-      </body>
-    </html>
-  );
+}: Readonly<{ children: React.ReactNode }>) {
+  return <>{children}</>;
 }
